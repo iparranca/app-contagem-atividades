@@ -4,7 +4,7 @@ from io import BytesIO
 from openpyxl import Workbook
 
 st.set_page_config(page_title="Contagem de Atividades", layout="wide")
-st.title("📊 Contagem de Atividades por Parâmetro......................")
+st.title("📊 Contagem de Atividades por Parâmetro")
 
 uploaded_file = st.file_uploader("Carregar ficheiro CSV (separador ';')", type=["csv"])
 
@@ -15,15 +15,19 @@ def determinar_ano_letivo(data):
         return f"{data.year - 1}/{data.year}"
 
 if uploaded_file:
-    # --- tentativa de leitura com tratamento de erro ---
-     df = pd.read_csv(
-             uploaded_file,
-             sep = ';',
-         encoding = 'latin1',
-         parse_dates = ['Ano e hora']
-                         )
+    # Tentativa de leitura com tratamento de erro
+    try:
+        df = pd.read_csv(
+            uploaded_file,
+            sep=';',
+            encoding='latin1',
+            parse_dates=['Ano e hora']
+        )
+    except Exception as e:
+        st.error(f"Erro ao ler o CSV: {e}")
+        st.stop()
 
-    # Renomear/limpar colunas
+    # Limpar e renomear colunas
     df.columns = df.columns.str.strip()
     df.rename(columns={'Ano e hora': 'DataHora'}, inplace=True)
 
