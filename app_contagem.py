@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from openpyxl import Workbook
-from datetime import datetime
 
 st.set_page_config(page_title="Contagem de Atividades", layout="wide")
 st.title("📊 Contagem de Atividades por Parâmetro")
 
-uploaded_file = st.file_uploader("Carregar ficheiro CSV", type=["csv"])
+uploaded_file = st.file_uploader("Carregar ficheiro CSV (separador ';')", type=["csv"])
 
 def determinar_ano_letivo(data):
     if data.month >= 9:
@@ -16,15 +15,22 @@ def determinar_ano_letivo(data):
         return f"{data.year - 1}/{data.year}"
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+    # --- tentativa de leitura com tratamento de erro ---
+    try:
+        df = pd.read_csv(uploaded_file, sep=';', parse_dates=['Ano e hora'])
+    except Exception as e:
+        st.error(f"Erro ao ler o CSV: {e}")
+        st.stop()
 
-    # Garantir que a primeira coluna é datetime
+    # Renomear/limpar colunas
     df.columns = df.columns.str.strip()
-    df.rename(columns={df.columns[0]: "DataHora"}, inplace=True)
-    df["DataHora"] = pd.to_datetime(df["DataHora"], errors="coerce")
+    df.rename(columns={'Ano e hora': 'DataHora'}, inplace=True)
+
+    # Converter para datetime
+    df['DataHora'] = pd.to_datetime(df['DataHora'], errors='coerce')
 
     # Criar coluna Ano Letivo
-    df["AnoLetivo"] = df["DataHora"].apply(determinar_ano_letivo)
+    df['AnoLetivo'] = df['DataHora'].apply(determinar_ano_letivo)
 
     # Mostrar dados carregados
     with st.expander("👁️ Visualizar dados carregados"):
@@ -70,10 +76,11 @@ if uploaded_file:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         tabela.to_excel(writer, index=False, sheet_name="Contagem")
+    output.seek(0)
 
     st.download_button(
         label="📥 Download da tabela em Excel",
-        data=output.getvalue(),
+        data=output.read(),
         file_name="contagem_atividades.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
