@@ -3,8 +3,8 @@ import pandas as pd
 from io import BytesIO
 from openpyxl import Workbook
 
-st.set_page_config(page_title="Contagem de Atividades2", layout="wide")
-st.title("📊 Contagem de Atividades por Parâmetro")
+st.set_page_config(page_title="Contagem de Atividades", layout="wide")
+st.title("📊 Contagem de Atividades por Parâmetro2")
 
 uploaded_file = st.file_uploader("Carregar ficheiro CSV (separador ';')", type=["csv"])
 
