@@ -16,11 +16,12 @@ def determinar_ano_letivo(data):
 
 if uploaded_file:
     # --- tentativa de leitura com tratamento de erro ---
-    try:
-        df = pd.read_csv(uploaded_file, sep=';', parse_dates=['Ano e hora'])
-    except Exception as e:
-        st.error(f"Erro ao ler o CSV: {e}")
-        st.stop()
+     df = pd.read_csv(
+             uploaded_file,
+             sep = ';',
+         encoding = 'latin1',
+         parse_dates = ['Ano e hora']
+                         )
 
     # Renomear/limpar colunas
     df.columns = df.columns.str.strip()
