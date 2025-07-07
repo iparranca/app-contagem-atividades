@@ -2,53 +2,80 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
+from datetime import datetime
 
-def definir_ano_letivo(data):
-    ano = data.year
+st.set_page_config(page_title="Contagem de Atividades", layout="wide")
+st.title("📊 Contagem de Atividades por Parâmetro")
+
+uploaded_file = st.file_uploader("Carregar ficheiro CSV", type=["csv"])
+
+def determinar_ano_letivo(data):
     if data.month >= 9:
-        return f"{ano}/{ano + 1}"
-    elif data.month <= 7:
-        return f"{ano - 1}/{ano}"
+        return f"{data.year}/{data.year + 1}"
     else:
-        return "Desconhecido"
-
-st.title("Contagem de Atividades por Ano Letivo")
-
-uploaded_file = st.file_uploader("Carrega o ficheiro CSV (separador ';')", type="csv")
+        return f"{data.year - 1}/{data.year}"
 
 if uploaded_file:
-    try:
-        df = pd.read_csv(uploaded_file, sep=';', parse_dates=['Ano e hora'])
-    except Exception as e:
-        st.error(f"Erro a ler o CSV: {e}")
+    df = pd.read_csv(uploaded_file)
+
+    # Garantir que a primeira coluna é datetime
+    df.columns = df.columns.str.strip()
+    df.rename(columns={df.columns[0]: "DataHora"}, inplace=True)
+    df["DataHora"] = pd.to_datetime(df["DataHora"], errors="coerce")
+
+    # Criar coluna Ano Letivo
+    df["AnoLetivo"] = df["DataHora"].apply(determinar_ano_letivo)
+
+    # Mostrar dados carregados
+    with st.expander("👁️ Visualizar dados carregados"):
+        st.dataframe(df)
+
+    # Seleção do tipo de contagem
+    tipo_contagem = st.selectbox(
+        "Selecionar tipo de contagem:",
+        [
+            "Por Atividade",
+            "Por Turma",
+            "Por Atividade e Turma",
+            "Por Disciplina",
+            "Por Ano Letivo",
+            "Por Atividade e Ano Letivo",
+            "Por Disciplina e Turma"
+        ]
+    )
+
+    # Geração da contagem
+    if tipo_contagem == "Por Atividade":
+        tabela = df.groupby("Atividade").size().reset_index(name="Contagem")
+    elif tipo_contagem == "Por Turma":
+        tabela = df.groupby("Turma").size().reset_index(name="Contagem")
+    elif tipo_contagem == "Por Atividade e Turma":
+        tabela = df.groupby(["Atividade", "Turma"]).size().reset_index(name="Contagem")
+    elif tipo_contagem == "Por Disciplina":
+        tabela = df.groupby("Disciplina").size().reset_index(name="Contagem")
+    elif tipo_contagem == "Por Ano Letivo":
+        tabela = df.groupby("AnoLetivo").size().reset_index(name="Contagem")
+    elif tipo_contagem == "Por Atividade e Ano Letivo":
+        tabela = df.groupby(["Atividade", "AnoLetivo"]).size().reset_index(name="Contagem")
+    elif tipo_contagem == "Por Disciplina e Turma":
+        tabela = df.groupby(["Disciplina", "Turma"]).size().reset_index(name="Contagem")
     else:
-        df['Ano Letivo'] = df['Ano e hora'].apply(definir_ano_letivo)
+        tabela = pd.DataFrame()
 
-        resumo = (
-            df.groupby(['Ano Letivo', 'Atividade', 'Turma', 'Disciplina'])
-            .size()
-            .reset_index(name='Contagem')
-        )
+    # Mostrar resultado
+    st.subheader("📋 Resultado da Contagem")
+    st.dataframe(tabela)
 
-        wb = Workbook()
+    # Exportar para Excel
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        tabela.to_excel(writer, index=False, sheet_name="Contagem")
 
-        ws_dados = wb.active
-        ws_dados.title = "DadosTratados"
-        for r in dataframe_to_rows(df, index=False, header=True):
-            ws_dados.append(r)
-
-        ws_resumo = wb.create_sheet("Resumo")
-        for r in dataframe_to_rows(resumo, index=False, header=True):
-            ws_resumo.append(r)
-
-        excel_io = BytesIO()
-        wb.save(excel_io)
-        excel_io.seek(0)
-
-        st.download_button(
-            label="Descarregar Excel com contagens",
-            data=excel_io,
-            file_name="Contagem_Atividades_Professores.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    st.download_button(
+        label="📥 Download da tabela em Excel",
+        data=output.getvalue(),
+        file_name="contagem_atividades.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+else:
+    st.info("👆 Carrega um ficheiro CSV para começar.")
