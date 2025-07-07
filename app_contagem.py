@@ -4,17 +4,22 @@ from io import BytesIO
 from openpyxl import Workbook
 
 st.set_page_config(page_title="Contagem de Atividades", layout="wide")
-st.title("📊 Contagem de Atividades por Parâmetro2222")
+st.title("📊 Contagem de Atividades por Parâmetro22222222")
 
 uploaded_file = st.file_uploader("Carregar ficheiro CSV (separador ';')", type=["csv"])
 
 def determinar_ano_letivo(data):
+    """
+    Retorna o ano letivo no formato 'AAAA/BBBB',
+    considerando que o ano letivo vai de setembro a julho.
+    """
     if data.month >= 9:
         return f"{data.year}/{data.year + 1}"
     else:
         return f"{data.year - 1}/{data.year}"
 
 if uploaded_file:
+    # --- Leitura do CSV com tratamento de erros ---
     try:
         df = pd.read_csv(
             uploaded_file,
@@ -26,21 +31,21 @@ if uploaded_file:
         st.error(f"Erro ao ler o CSV: {e}")
         st.stop()
 
-    # Limpar e renomear colunas
+    # --- Limpar e garantir nomes de colunas consistentes ---
     df.columns = df.columns.str.strip()
     df.rename(columns={'Ano e hora': 'DataHora'}, inplace=True)
 
-    # Converter para datetime
+    # --- Converter coluna para datetime ---
     df['DataHora'] = pd.to_datetime(df['DataHora'], errors='coerce')
 
-    # Criar coluna Ano Letivo
+    # --- Adicionar coluna AnoLetivo ---
     df['AnoLetivo'] = df['DataHora'].apply(determinar_ano_letivo)
 
-    # Mostrar dados carregados
+    # Mostrar dados originais
     with st.expander("👁️ Visualizar dados carregados"):
         st.dataframe(df)
 
-    # Seleção do tipo de contagem
+    # --- Seletor de tipo de contagem ---
     tipo_contagem = st.selectbox(
         "Selecionar tipo de contagem:",
         [
@@ -54,7 +59,7 @@ if uploaded_file:
         ]
     )
 
-    # Geração da contagem
+    # --- Gerar o DataFrame de contagem conforme escolha ---
     if tipo_contagem == "Por Atividade":
         tabela = df.groupby("Atividade").size().reset_index(name="Contagem")
     elif tipo_contagem == "Por Turma":
@@ -76,7 +81,7 @@ if uploaded_file:
     st.subheader("📋 Resultado da Contagem")
     st.dataframe(tabela)
 
-    # Exportar para Excel
+    # --- Exportar para Excel ---
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         tabela.to_excel(writer, index=False, sheet_name="Contagem")
