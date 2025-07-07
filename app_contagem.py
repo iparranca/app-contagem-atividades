@@ -4,7 +4,7 @@ from io import BytesIO
 from openpyxl import Workbook
 
 st.set_page_config(page_title="Contagem de Atividades", layout="wide")
-st.title("📊 Contagem de Atividades por Parâmetro22222222")
+st.title("📊 Contagem de Atividades por Parâmetro")
 
 uploaded_file = st.file_uploader("Carregar ficheiro CSV (separador ';')", type=["csv"])
 
